@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inevitable Escape (Gem Stone Reference)</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f4f1de;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            text-align: center;
+        }
+        .button {
+            background-color: #81b29a;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        #eventCounter {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, 10%);
+        padding: 20px;
+        background-color: #333;
+        color: white;
+        border-radius: 5px;
+        }
+        #reset-button {
+            position: fixed;
+            bottom: -7px;
+            right: -200px;
+            background-color: #81b29a;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">   
+        <h1 id="game-title">Inevitable Escape</h1>
+        <p id="game-text"></p>
+        <div id="choice-buttons">
+        </div>
+    </div>
+    <div id="eventCounter" style="position: fixed; top: 10px; right: 10px; padding: 10px; background-color: #333; color: white; border-radius: 5px;">
+        Hours has pass: <span id="counter">0</span>
+        <button id="reset-button" class="button">Reset Game</button>
+    </div>
+    <script>
+        let gameText = document.querySelector("#game-text");
+        let choiceButtons = document.querySelector("#choice-buttons");
+        let deathCount = 0;
+        let counter = 0;
+        let state = {
+            deathEvents: [],
+            prevEvent: null,
+            crystals: [],
+            disabledDoors: [], // To keep track of disabled doors
+        };
+        
+        function startGame() {
+            if (state.crystals.length >= 4) {
+                gameText.innerText = 'Congratulations! You use four crystals and say "It\'s inevitable" and escape the time hole.';
+                choiceButtons.innerHTML = "";
+            } else {
+                gameText.innerText = `In the room with four doors. What should you choose? You have died ${deathCount} times. You have collected ${state.crystals.length} crystals.`;
+                showChoices(['Door 1', 'Door 2', 'Door 3', 'Door 4']);
+                for (let i = 0; i < state.disabledDoors.length; i++) {
+                    disableButton(state.disabledDoors[i]);
+                }
+            }
+        }
+        function disableButton(index) {
+            let button = document.querySelectorAll('.button')[index];
+            button.disabled = true;
+            button.style.backgroundColor = "#ccc";
+            if (!state.disabledDoors.includes(index)) {
+                state.disabledDoors.push(index);
+            }
+        }
+
+        function disableAllButtons() {
+            let buttons = document.querySelectorAll('.button');
+            buttons.forEach(button => button.disabled = true);
+        }
+
+        function enableAllButtons() {
+            let buttons = document.querySelectorAll('.button');
+            buttons.forEach(button => button.disabled = false);
+        }
+        function restartGame() {
+            resetCounter();
+            state.deathEvents.push({event: state.currentEvent, door: state.currentDoor});
+            deathCount++;
+            startGame();
+        }
+
+
+        // Update the counter display
+        function updateCounter() {
+            document.getElementById('counter').innerText = counter;
+        }
+
+        // Call this function whenever an event is clicked
+        function incrementCounter() {
+            counter++;
+            updateCounter();
+        }
+
+        // Call this function whenever the player goes back to a previous event
+        function decrementCounter() {
+            if (counter > 0) {
+                counter--;
+            }
+            updateCounter();
+        }
+
+        // Call this function whenever the player dies
+        function resetCounter() {
+            counter = 0;
+            updateCounter();
+        }
+
+        function showChoices(choices) {
+            choiceButtons.innerHTML = "";
+            for (let i = 0; i < choices.length; i++) {
+                let button = document.createElement('button');
+                button.innerText = choices[i];
+                button.classList.add('button');
+                button.addEventListener('click', function() {
+                    selectChoice(choices[i]);
+                });
+                choiceButtons.appendChild(button);
+            }
+        }
+
+        function doorOneEvents(event) {
+            let prevEvent = state.currentEvent;
+            state.currentEvent = event;
+            state.currentDoor = 1;
+
+            let isDeathEvent = state.deathEvents.some(deathEvent => deathEvent.event === event && deathEvent.door === state.currentDoor);
+
+            switch(event) {
+                case 'Initial':
+                    gameText.innerText = "You see a glowing crystal in the middle of the room. What do you do?";
+                    showChoices(['Touch it', 'Ignore it']);
+                    break;
+                case 'Touch it':
+                    gameText.innerText = "You touched the crystal. It emits a blinding light, and suddenly, you are somewhere else. What now?";
+                    showChoices(['Look around', 'Go back']);
+                    break;
+                case 'Look around':
+                    gameText.innerText = "You find yourself in a mysterious forest. There are two paths before you. Which one do you choose?";
+                    showChoices(['Left path', 'Right path']);
+                    break; 
+                case 'Go back':
+                    gameText.innerText = "You try to go back, but you find yourself in a large, grand hall. There are stairs going up and a door at the other end. What do you do?";
+                    showChoices(['Climb the stairs', 'Go through the door']);
+                    break;
+                case 'Go through the door':
+                    gameText.innerText = "You got back to the room with four doors.";
+                    setTimeout(restartGame, 3000);
+                    break;
+
+                // Add more cases as needed for each choice
+                case 'Right path':
+                    gameText.innerText = "You walk down the right path and find a magical stone. Do you pick it up?";
+                    showChoices(['Pick up the stone','Ignore it']);
+                    break;
+                case 'Pick up the stone':
+                    gameText.innerText = "You decide not to open the chest. You find a yellow crystal on the ground. You pick it up.";
+                    state.crystals.push('red'); 
+                    setTimeout(startGame, 3000);
+                    disableButton(0);
+                    break;
+                case 'Ignore it':
+                    gameText.innerText = "You ignore the stone and continue forward. Suddenly, you fall into a pit. You have died.";
+                    setTimeout(restartGame, 3000);
+                    break;
+
+                    // Death State 
+                case 'Left path':
+                if (isDeathEvent) {
+                    gameText.innerText = "You remember dying the last time you chose this path. Are you sure you want to proceed?";
+                    showChoices(['Yes', 'No']);
+                    state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                } else {
+                    gameText.innerText = "You walk down the left path and fall into a hidden pitfall. You have died.";
+                    setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                }
+                break;
+
+                case 'Climb the stairs':
+                if (isDeathEvent) {
+                    gameText.innerText = "Don't....come on, you chose this once!！ Are you sure you want to proceed?";
+                    showChoices(['Yes', 'No']);
+                    state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                } else {
+                    gameText.innerText = "The stairs suddenly turn into a slider and slide you with a unstoppable momentum, and your soul flys away.";
+                    setTimeout(restartGame, 2000);  // Restart the game after 2 seconds
+                }
+                break;
+
+                    // Yes and No
+                case 'Yes':
+                    gameText.innerText = "can't believe you would chose this again!!! you died.";
+                    setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    break;
+                case 'No':
+                    doorOneEvents(state.prevEvent);  // Go back to the previous event
+                    break;
+            }
+            incrementCounter();
+        }
+        
+        function doorTwoEvents(event) {
+            let prevEvent = state.currentEvent;  // Store the current event
+            state.currentEvent = event;  // Update the current event
+            state.currentDoor = 2;
+            
+            let isDeathEvent = state.deathEvents.some(deathEvent => deathEvent.event === event && deathEvent.door === state.currentDoor);
+            
+            switch(event) {
+                case 'Initial':
+                    gameText.innerText = "You enter a room with a large, ominous statue. What do you do?";
+                    showChoices(['Inspect the statue', 'Ignore it']);
+                    break;
+                case 'Inspect the statue':
+                    gameText.innerText = "You approach the statue. As you get closer, you notice a button on the statue's pedestal. Do you press it?";
+                    showChoices(['Press the button', 'I am not going to!!']);
+                    break;
+                
+                    //crystal
+                    case 'I am not going to!!':
+                    gameText.innerText = "You decide not to open the chest. You find a green crystal on the ground. You pick it up.";
+                    state.crystals.push('green');
+                    setTimeout(function() {
+                        startGame();
+                        disableButton(1);
+                    }, 2000);
+                    break;
+                
+                    // Later cases
+                case 'Ignore it':
+                    gameText.innerText = "You ignore the statue and continue forward. There's a strange noise behind you. Do you turn around?";
+                    showChoices(['Turn around', 'Keep going']);
+                    break;
+                
+                    //recall
+                case 'Press the button':
+                    if (isDeathEvent) {
+                        gameText.innerText = "Ummm don't do it...please!";
+                        showChoices(['Yes', 'No']);
+                        state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                    } else {
+                        gameText.innerText = "You press the button. Suddenly, the floor beneath you opens up and you fall into a pit of spikes. You have died.";
+                        setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    }
+                    break;
+                case 'Yes':
+                    gameText.innerText = "nooooooooooo!!! you die in the same path!!!!";
+                    setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    break;
+                case 'No':
+                    doorTwoEvents(state.prevEvent);  // Go back to the previous event
+                    break;
+                // Add more cases as needed for each choice
+            }
+            incrementCounter();
+        }
+        function doorThreeEvents(event) {
+            let prevEvent = state.currentEvent;  // Store the current event
+            state.currentEvent = event;  // Update the current event
+            state.currentDoor = 3;
+
+            let isDeathEvent = state.deathEvents.some(deathEvent => deathEvent.event === event && deathEvent.door === state.currentDoor);
+
+            switch(event) {
+                case 'Initial':
+                    gameText.innerText = "You enter a room with a mysterious well in the center. What do you do?";
+                    showChoices(['Look into the well', 'Ignore it']);
+                    break;
+                case 'Look into the well':
+                    gameText.innerText = "You look into the well. It seems to go on forever. There's a bucket with a rope next to it. Do you descend?";
+                    showChoices(['Descend the well', 'Not going to!!']);
+                    break;
+                case 'Descend the well':
+                    if (isDeathEvent) {
+                        gameText.innerText = "You remember dying the last time you descended this well. Are you sure you want to proceed?";
+                        showChoices(['Yes', 'No']);
+                        state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                    } else {
+                        gameText.innerText = "You descend the well. Halfway down, the rope snaps and you fall into the darkness. You have died.";
+                        setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    }
+                    break;
+    
+                    //crystal
+                case 'Not going to!!':
+                    gameText.innerText = "3 seconds later, the well disappear and purple crystal has appear. Pick it up for a better good!";
+                    state.crystals.push('purple');
+                    setTimeout(function() {
+                        startGame();
+                        disableButton(2);
+                    }, 2000);
+                    break;
+                
+                    //recall
+                case 'Yes':
+                    gameText.innerText = "...you knew you would die.";
+                    setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    break;
+                case 'No':
+                    doorThreeEvents(state.prevEvent);  // Go back to the previous event
+                    break;
+                
+                    // Later cases
+                case 'Ignore it':
+                    gameText.innerText = "You picked ignore it? remember door one's path?";
+                    showChoices(['Turn around', 'Keep going']);
+                    break;
+                // Add more cases as needed for each choice
+                case 'Turn around':
+                if (isDeathEvent) {
+                        gameText.innerText = "Are you sure you want to proceed?";
+                        showChoices(['Yes', 'No']);
+                        state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                    } else {
+                        gameText.innerText = "Ah ha no going back this time.";
+                        setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    }
+                    break;
+                case 'Keep going':
+                if (isDeathEvent) {
+                        gameText.innerText = "ah oh, keep going still mean.....";
+                        showChoices(['Yes', 'No']);
+                        state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                    } else {
+                        gameText.innerText = "this time keep going still mean.....ahhhhhhhh die of hunger keep going...";
+                        setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    }
+                    break;
+            }   
+            incrementCounter();
+        }
+        function doorFourEvents(event) {
+            let prevEvent = state.currentEvent;  // Store the current event
+            state.currentEvent = event;  // Update the current event
+            state.currentDoor = 4;
+
+            let isDeathEvent = state.deathEvents.some(deathEvent => deathEvent.event === event && deathEvent.door === state.currentDoor);
+
+            switch(event) {
+                case 'Initial':
+                    gameText.innerText = "You enter a room with a towering tree growing in the middle. What do you do?";
+                    showChoices(['Climb the tree', 'Ignore it']);
+                    break;
+                case 'Climb the tree':
+                    gameText.innerText = "You start climbing the tree. About halfway up, you notice a beehive. Do you proceed?";
+                    showChoices(['Proceed', 'Climb down']);
+                    break;
+                              
+                    //crystal
+                case 'Climb down':
+                    gameText.innerText = "A pink crystal showed up, You pick it up.";
+                    state.crystals.push('pink');
+                    setTimeout(function() {
+                        startGame();
+                        disableButton(3);
+                    }, 2000);
+                    break;
+                                
+                    // recall
+                case 'Proceed':
+                    if (isDeathEvent) {
+                        gameText.innerText = "You remember getting attacked by bees the last time you proceeded. Are you sure you want to proceed?";
+                        showChoices(['Yes', 'No']);
+                        state.prevEvent = prevEvent;  // Update the previous event only if the current event is a death event
+                    } else {
+                        gameText.innerText = "You proceed and accidentally shake the beehive. The bees attack you. You have died.";
+                        setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    }
+                    break;
+                case 'Yes':
+                    gameText.innerText = "You proceed and accidentally shake the beehive. The bees attack you. You have died.";
+                    setTimeout(restartGame, 3000);  // Restart the game after 2 seconds
+                    break;
+                case 'No':
+                    doorFourEvents(state.prevEvent);  // Go back to the previous event
+                    break;
+                
+                    // Later cases
+                case 'Ignore it':
+                    gameText.innerText = "You wouldn't think this time is going to be that easy right!";
+                    showChoices(['Climb down']);
+                    break;
+                
+            }
+            incrementCounter();
+        }
+
+        function selectChoice(choice) {
+            disableAllButtons();
+            setTimeout(enableAllButtons, 3000);  // Re-enable all buttons after 3 seconds
+            if (choice.startsWith('Door')) {
+                const doorNumber = parseInt(choice.split(' ')[1]);
+                switch(doorNumber) {
+                    case 1:
+                        doorOneEvents('Initial');
+                        break;
+                    case 2:
+                        doorTwoEvents('Initial');
+                        break;
+                    case 3:
+                        doorThreeEvents('Initial');
+                        break;
+                    case 4:
+                        doorFourEvents('Initial');
+                        break;
+                }
+            } else {
+                switch(state.currentDoor) {
+                    case 1:
+                        if(choice === 'No') {
+                            decrementCounter();
+                        }
+                        doorOneEvents(choice);
+                        break;
+                    case 2:
+                        if(choice === 'No') {
+                            decrementCounter();
+                        }
+                        doorTwoEvents(choice);
+                        break;
+                    case 3:
+                        if(choice === 'No') {
+                            decrementCounter();
+                        }
+                        doorThreeEvents(choice);
+                        break;
+                    case 4:
+                        if(choice === 'No') {
+                            decrementCounter();
+                        }
+                        doorFourEvents(choice);
+                        break;
+                }
+            }
+        }
+    
+    startGame();
+
+    document.getElementById('reset-button').addEventListener('click', function() {
+        // Clear localStorage
+        localStorage.clear();
+
+        // Reset game state
+        deathCount = 0;
+        counter = 0;
+        state = {
+            deathEvents: [],
+            prevEvent: null,
+            crystals: [],
+            disabledDoors: [],
+        };
+
+        // Restart game
+        startGame();
+        resetCounter();
+    });
+    </script>
+</body>
+</html>
